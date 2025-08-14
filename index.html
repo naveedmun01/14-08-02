@@ -1,1 +1,123 @@
-<!doctype html><html lang='en'><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width,initial-scale=1.0'/><title>WeatherPro-update by Mun Developers</title><script src='https://cdn.tailwindcss.com'></script><link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/></head><body><div id='root'></div><script type='module' src='/src/main.jsx'></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AccurWeather - Advanced</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0d1117;
+        color: white;
+    }
+    header {
+        background: #161b22;
+        padding: 1rem;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    #searchBar {
+        display: flex;
+        justify-content: center;
+        margin: 1rem;
+    }
+    #searchBar input {
+        width: 300px;
+        padding: 0.5rem;
+        border: none;
+        border-radius: 5px 0 0 5px;
+    }
+    #searchBar button {
+        padding: 0.5rem 1rem;
+        background: #238636;
+        color: white;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+    }
+    .weather-section {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+        margin: 1rem;
+    }
+    .card {
+        background: #161b22;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+        min-width: 150px;
+    }
+    iframe {
+        width: 100%;
+        height: 400px;
+        border: none;
+        border-radius: 10px;
+    }
+</style>
+</head>
+<body>
+    <header>🌤 AccurWeather - Advanced</header>
+    <div id="searchBar">
+        <input type="text" id="cityInput" placeholder="Enter city name..." />
+        <button onclick="getWeather()">Search</button>
+    </div>
+    <div id="currentWeather" class="weather-section"></div>
+    <h2 style="text-align:center">Radar Map</h2>
+    <iframe id="radarMap" src=""></iframe>
+    <h2 style="text-align:center">7-Day Forecast</h2>
+    <div id="forecast" class="weather-section"></div>
+
+<script>
+const apiKey = "YOUR_OPENWEATHER_API_KEY"; // <-- یہاں اپنی API key ڈالیں
+
+async function getWeather(){
+    const city = document.getElementById("cityInput").value.trim();
+    if(!city) return alert("Enter a city name!");
+
+    // GeoCoding API
+    const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${apiKey}`);
+    const geoData = await geoRes.json();
+    if(!geoData.length) return alert("City not found!");
+
+    const { lat, lon, name, country } = geoData[0];
+
+    // One Call 3.0
+    const weatherRes = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+    const weatherData = await weatherRes.json();
+
+    // Current weather
+    const current = weatherData.current;
+    document.getElementById("currentWeather").innerHTML = `
+        <div class="card">
+            <h3>${name}, ${country}</h3>
+            <p>${current.weather[0].description}</p>
+            <p>🌡 ${current.temp}°C</p>
+            <p>💧 ${current.humidity}%</p>
+            <p>💨 ${current.wind_speed} m/s</p>
+        </div>
+    `;
+
+    // Radar map (RainViewer)
+    document.getElementById("radarMap").src = `https://www.rainviewer.com/map.html?loc=${lat},${lon},8&oFa=1&oC=1&oU=1&oCS=1&oF=1&oT=0&oAP=0&c=1&sm=1&sn=1`;
+
+    // 7-day forecast
+    const forecastHTML = weatherData.daily.slice(0,7).map(day=>{
+        const date = new Date(day.dt * 1000);
+        return `
+            <div class="card">
+                <h4>${date.toDateString()}</h4>
+                <p>${day.weather[0].description}</p>
+                <p>🌡 ${day.temp.day}°C</p>
+                <p>Min: ${day.temp.min}°C / Max: ${day.temp.max}°C</p>
+            </div>
+        `;
+    }).join("");
+    document.getElementById("forecast").innerHTML = forecastHTML;
+}
+</script>
+</body>
+</html>
